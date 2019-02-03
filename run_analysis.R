@@ -1,0 +1,42 @@
+path<-file.path("./", "UCI HAR Dataset")
+path<-file.path(".", "UCI HAR Dataset")
+fileList<-list.files(path, recursive = TRUE)
+TestData<-read.table(file.path(path, "test", "Y_test.txt"))
+TrainData<-read.table(file.path(path, "train", "Y_train.txt"))
+TestActivityData<-TestData
+rm(TestData)
+TrainActivityData<-TrainData
+rm(TrainData)
+TrainSubjectData<-read.table(file.path(path,"train","subject_train.txt"))
+TestSubjectData<-read.table(file.path(path,"test","subject_test.txt"))
+TestFeaturesData<-read.table(file.path(path,"test","X_test.txt"))
+TrainFeaturesData<-read.table(file.path(path,"train","X_train.txt"))
+SubjectData<-rbind(TrainSubjectData,TestSubjectData)
+ActivityData<-rbind(TrainActivityData,TestActivityData)
+FeaturesData<-rbind(TrainFeaturesData,TestFeaturesData)
+names(SubjectData)<-c("subject")
+names(ActivityData)<-c("activity")
+FeatureNamesData<-read.table(file.path(path,"features.txt"))
+names(FeaturesData)<-FeatureNamesData$V2
+MergeData<-cbind(SubjectData,ActivityData)
+Data1<-cbind(FeaturesData,MergeData)
+FeatureNamesSubset<-FeatureNamesData$V2[grep("mean\\(\\)|std\\(\\)",FeatureNamesData$V2)]
+SelectNames<-c(as.character(FeatureNamesSubset),"subject","activity")
+Data2<-subset(Data1,select = SelectNames)
+ActivityLabels<-read.table(file.path(path,"activity_labels.txt"))
+Data2$activity<-as.character(Data2$activity)
+for (i in 1:6) {
+     Data2$activity[Data2$activity == i]<-as.character(ActivityLabels[i,2])
+ }
+Data2$activity<-as.factor(Data2$activity)
+names(Data2)<-gsub("^t", "time", names(Data2))
+names(Data2)<-gsub("^f", "frequency", names(Data2))
+names(Data2)<-gsub("Acc", "Accelerometer", names(Data2))
+names(Data2)<-gsub("Gyro", "Gyroscope", names(Data2))
+names(Data2)<-gsub("Mag", "Magnitude", names(Data2))
+names(Data2)<-gsub("BodyBody", "Body", names(Data2))
+library(plyr)
+Data3<-aggregate(. ~subject + activity, Data2, mean)
+Data4<-Data3[order(Data3$subject,Data3$activity),]
+write.table(Data4,file = "tidyData.txt",row.names = FALSE)
+library(knitr)
